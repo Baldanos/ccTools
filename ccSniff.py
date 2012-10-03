@@ -20,31 +20,83 @@ readLock = threading.Lock()
 
 class serialReader(threading.Thread):
 
-    def __init__(self):
+    def __init__(self, busPirate=True):
         super(serialReader, self).__init__()
         self.terminated = False
-    
+        try:
+            if busPirate:
+                self.ser=serial.Serial(options.serPort, 115200, timeout=1)
+                self.enterBitBang()
+            else:
+                self.ser=serial.Serial(options.serPort, 9600, timeout=1)
+        except serial.SerialException, e:
+            print e.message
+            sys.exit()
+
+   
     def run(self):
         #print "serialReader running"
-        global ser
         global data
         global readLock
         global outFile
+        self.ser.read(self.ser.inWaiting())
         while not self.terminated:
-            bytesToRead = ser.inWaiting()
+            bytesToRead = self.ser.inWaiting()
             #print bytesToRead
             if bytesToRead > 0:
                 #print "serial waiting for lock"
                 readLock.acquire()
-                data = data + ser.read(bytesToRead)
+                data = data + self.ser.read(bytesToRead)
                 if outFile is not None:
                     outFile.write(data)
                 #print "serial released lock"
                 readLock.release()
             time.sleep(1)
+        self.leaveBitBang()
 
     def stop(self):
         self.terminated = True
+
+    def enterBitBang(self):
+
+        # Enter bitbang mode
+        for i in xrange(20):
+            self.ser.write("\x00")
+            while self.ser.inWaiting()>4:
+                if "BBIO1" in self.ser.read(5):
+                    break
+
+        # Enter UART mode
+        self.ser.write("\x03")
+
+        #Baud rate : 9600
+        self.ser.write(chr(0b01100100))
+
+        #Peripherals : power ON / pullup ON
+        self.ser.write(chr(0b01001100))
+
+
+        # Enable UART RX echo
+        self.ser.write(chr(0b00000010))
+
+        time.sleep(0.1)
+
+        # Cleans input buffer
+        self.ser.flushInput()
+
+
+    def leaveBitBang(self):
+
+        # Disable UART RX echo
+        self.ser.write(chr(0b00000011))
+
+
+        # Leave UART mode
+        self.ser.write("\x00")
+
+        # Leave bitbang mode
+        self.ser.write("\x0f")
+
 
 class ccTalkDisplay(threading.Thread):
 
@@ -72,44 +124,6 @@ class ccTalkDisplay(threading.Thread):
         self.terminated = True
 
 
-def enterBitBang():
-
-    # Enter bitbang mode
-    for i in xrange(20):
-        ser.write("\x00")
-        if ser.inWaiting()>4:
-            if "BBIO1" in ser.read(5):
-                break
-
-    # Enter UART mode
-    ser.write("\x03")
-
-    #Baud rate : 9600
-    ser.write(chr(0b01100100))
-
-    #Peripherals : power ON / pullup ON
-    ser.write(chr(0b01001100))
-
-
-    # Enable UART RX echo
-    ser.write(chr(0b00000010))
-
-    # Cleans input buffer
-    ser.flushInput()
-
-
-def leaveBitBang():
-
-    # Disable UART RX echo
-    ser.write(chr(0b00000011))
-
-
-    # Leave UART mode
-    ser.write("\x00")
-
-    # Leave bitbang mode
-    ser.write("\x0f")
-
 if __name__ == '__main__':
 
     parser = OptionParser()
@@ -123,26 +137,19 @@ if __name__ == '__main__':
         print "Error, no serial port specified"
         sys.exit()
     else:
-        try:
-            ser=serial.Serial(options.serPort, 115200, timeout=1)
-        except serial.SerialException, e:
-            print e.message
-            sys.exit()
+        reader=serialReader(options.busPirate)
 
     if options.outFile is not None:
         outFile = open(options.outFile,"wb")
     else:
         outFile = None
 
-    #Inits th bus pirate device if needed
-    if options.busPirate:
-        enterBitBang()
 
     display = ccTalkDisplay()
     display.start()
     print "display init done"
 
-    reader = serialReader()
+
     reader.start()
     print "serial reader init done"
 
@@ -159,5 +166,3 @@ if __name__ == '__main__':
         reader.join()
         if outFile is not None:
             outFile.close()
-        if options.busPirate:
-            leaveBitBang()

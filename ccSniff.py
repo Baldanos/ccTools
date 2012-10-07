@@ -52,50 +52,32 @@ class serialReader(threading.Thread):
                 #print "serial released lock"
                 readLock.release()
             time.sleep(1)
-        self.leaveBitBang()
 
     def stop(self):
         self.terminated = True
 
-    def enterBitBang(self):
-
+    def enterBitBang():
+        """
+        Enters binary bitbang mode on the bus pirate
+        """
         # Enter bitbang mode
         for i in xrange(20):
-            self.ser.write("\x00")
-            while self.ser.inWaiting()>4:
-                if "BBIO1" in self.ser.read(5):
-                    break
-
+            ser.write("\x00")
+        if "BBIO1" not in ser.read(5):
+            sys.exit(0)
+            
         # Enter UART mode
-        self.ser.write("\x03")
-
+        ser.write("\x03")
+        if "ART1" not in ser.read(4):
+            sys.exit(0)
         #Baud rate : 9600
-        self.ser.write(chr(0b01100100))
-
+        ser.write(chr(0b01100100))
+        ser.read(1)
         #Peripherals : power ON / pullup ON
-        self.ser.write(chr(0b01001100))
-
-
-        # Enable UART RX echo
-        self.ser.write(chr(0b00000010))
-
-        time.sleep(0.1)
-
-        # Cleans input buffer
-        self.ser.flushInput()
-
-
-    def leaveBitBang(self):
-
-        # Disable UART RX echo
-        self.ser.write(chr(0b00000011))
-
-
-        # Leave UART mode
-        self.ser.write("\x00")
-
-        # Leave bitbang mode
-        self.ser.write("\x0f")
+        ser.write(chr(0b01001100))
+        ser.read(1)
+        ser.write(chr(0b00001111))
+        ser.read(1)
 
 
 class ccTalkDisplay(threading.Thread):

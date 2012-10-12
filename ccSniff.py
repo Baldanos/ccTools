@@ -20,18 +20,10 @@ readLock = threading.Lock()
 
 class serialReader(threading.Thread):
 
-    def __init__(self, busPirate=True):
+    def __init__(self):
         super(serialReader, self).__init__()
         self.terminated = False
-        try:
-            if busPirate:
-                self.ser=serial.Serial(options.serPort, 115200, timeout=1)
-                self.enterBitBang()
-            else:
-                self.ser=serial.Serial(options.serPort, 9600, timeout=1)
-        except serial.SerialException, e:
-            print e.message
-            sys.exit()
+        global ser
 
    
     def run(self):
@@ -39,45 +31,46 @@ class serialReader(threading.Thread):
         global data
         global readLock
         global outFile
-        self.ser.read(self.ser.inWaiting())
+        ser.read(ser.inWaiting())
         while not self.terminated:
-            bytesToRead = self.ser.inWaiting()
+            bytesToRead = ser.inWaiting()
             #print bytesToRead
             if bytesToRead > 0:
                 #print "serial waiting for lock"
                 readLock.acquire()
-                data = data + self.ser.read(bytesToRead)
+                data = data + ser.read(bytesToRead)
                 if outFile is not None:
                     outFile.write(data)
                 #print "serial released lock"
                 readLock.release()
-            time.sleep(1)
+            time.sleep(0.1)
 
     def stop(self):
         self.terminated = True
 
-    def enterBitBang():
-        """
-        Enters binary bitbang mode on the bus pirate
-        """
-        # Enter bitbang mode
-        for i in xrange(20):
-            ser.write("\x00")
-        if "BBIO1" not in ser.read(5):
-            sys.exit(0)
-            
-        # Enter UART mode
-        ser.write("\x03")
-        if "ART1" not in ser.read(4):
-            sys.exit(0)
-        #Baud rate : 9600
-        ser.write(chr(0b01100100))
-        ser.read(1)
-        #Peripherals : power ON / pullup ON
-        ser.write(chr(0b01001100))
-        ser.read(1)
-        ser.write(chr(0b00001111))
-        ser.read(1)
+def enterBitBang():
+    """
+    Enters binary bitbang mode on the bus pirate
+    """
+    # Enter bitbang mode
+    for i in xrange(20):
+        ser.write("\x00")
+    if "BBIO1" not in ser.read(5):
+        sys.exit(0)
+        
+    # Enter UART mode
+    ser.write("\x03")
+    if "ART1" not in ser.read(4):
+        sys.exit(0)
+    #Baud rate : 9600
+    ser.write(chr(0b01100100))
+    ser.read(1)
+    #Peripherals : power ON / pullup ON
+    ser.write(chr(0b01001100))
+    ser.read(1)
+    #Start UART bridge
+    ser.write(chr(0b00001111))
+    ser.read(1)
 
 
 class ccTalkDisplay(threading.Thread):
@@ -100,7 +93,7 @@ class ccTalkDisplay(threading.Thread):
 
                 for i in xrange(0,len(messages)):
                     print messages[i]
-            time.sleep(1)
+            time.sleep(0.1)
 
     def stop(self):
         self.terminated = True
@@ -119,7 +112,17 @@ if __name__ == '__main__':
         print "Error, no serial port specified"
         sys.exit()
     else:
-        reader=serialReader(options.busPirate)
+        try:
+            if options.busPirate:
+                #ser=serial.Serial(options.serPort, 115200, timeout=1)
+                ser=serial.Serial(options.serPort, 115200)
+                enterBitBang()
+            else:
+                #ser=serial.Serial(options.serPort, 9600, timeout=1)
+                ser=serial.Serial(options.serPort, 9600)
+        except serial.SerialException, e:
+            print e.message
+            sys.exit()
 
     if options.outFile is not None:
         outFile = open(options.outFile,"wb")
@@ -132,6 +135,7 @@ if __name__ == '__main__':
     print "display init done"
 
 
+    reader = serialReader()
     reader.start()
     print "serial reader init done"
 

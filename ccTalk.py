@@ -16,22 +16,19 @@ def parseMessages(data):
     Parses a byte string to grab messages
     Returns a list containing all ccTalk messages found
     """
-    try:
-        messages = []
-        length = data[1]
-
-        message=data[:ord(length)+5]
-        msg = ccTalkMessage(message)
-        messages.append(msg)
-        data = data[ord(length)+5:]
-    except:
-        data = data[1:]
-
-    if len(data)>0:
-        data, messages2 = parseMessages(data)
-        for message in messages2:
-            messages.append(message)
-    
+    messages = []
+    while len(data) > 0:
+        try:
+            length = ord(data[1])
+            if len(data) < length+5:
+                break
+            message=data[:length+5]
+            msg = ccTalkMessage(message)
+            messages.append(msg)
+            data = data[length+5:]
+        except:
+            data = data[1:]
+            continue
     return (data,messages)
 
 # Header types definition

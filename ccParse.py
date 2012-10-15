@@ -66,7 +66,7 @@ def main ():
 
     liste = urwid.Pile(
                        [(urwid.LineBox(messagesList)),
-                        ('fixed',15,(urwid.LineBox(infoFill))), 
+                        ('fixed',17,(urwid.LineBox(infoFill))), 
                         ])
 
     header = urwid.AttrMap(urwid.Text('ccParse 0.2 - ' + str(len(keys)) + ' messages'), 'head')

@@ -38,9 +38,10 @@ class serialReader(threading.Thread):
             if bytesToRead > 0:
                 #print "serial waiting for lock"
                 readLock.acquire()
-                data = data + ser.read(bytesToRead)
+                read = ser.read(bytesToRead)
+                data = data + read 
                 if outFile is not None:
-                    outFile.write(data)
+                    outFile.write(read)
                 #print "serial released lock"
                 readLock.release()
             time.sleep(0.1)
@@ -56,12 +57,14 @@ def enterBitBang():
     for i in xrange(20):
         ser.write("\x00")
     if "BBIO1" not in ser.read(5):
+        print "Could not get into bbIO mode"
         sys.exit(0)
         
     # Enter UART mode
     ser.write("\x03")
-    if "ART1" not in ser.read(4):
-        sys.exit(0)
+    time.sleep(0.01)
+    #if "ART1" not in ser.read(4):
+    #    sys.exit(0)
     #Baud rate : 9600
     ser.write(chr(0b01100100))
     ser.read(1)
@@ -93,7 +96,7 @@ class ccTalkDisplay(threading.Thread):
 
                 for i in xrange(0,len(messages)):
                     print messages[i]
-            time.sleep(0.1)
+            time.sleep(0.2)
 
     def stop(self):
         self.terminated = True
@@ -121,6 +124,7 @@ if __name__ == '__main__':
                 #ser=serial.Serial(options.serPort, 9600, timeout=1)
                 ser=serial.Serial(options.serPort, 9600)
         except serial.SerialException, e:
+            print "Error"
             print e.message
             sys.exit()
 

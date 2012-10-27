@@ -125,12 +125,13 @@ def enterBitBang():
     for i in xrange(20):
         ser.write("\x00")
     if "BBIO1" not in ser.read(5):
+        print "Could not get into bbIO mode"
         sys.exit(0)
         
     # Enter UART mode
     ser.write("\x03")
-    if "ART1" not in ser.read(4):
-        sys.exit(0)
+    #if "ART1" not in ser.read(4):
+    #    sys.exit(0)
     #Baud rate : 9600
     ser.write(chr(0b01100100))
     ser.read(1)

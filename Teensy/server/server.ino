@@ -2,11 +2,9 @@ int MYADDRESS = 1;
 int state = 0;
 
 //Channel value, each channel got its number of credits to add
-int channelValue[] = {0,0,0,0,1,0,2,0,5,0,0,0,0,0,0,0};
+int channelValue[] = {0,0,0,0,0,1,0,2,0,5,0,0,0,0,0,0,0};
 //The credit key to play on the keyboard
 char creditKey = KEY_5;
-
-
 
 
 byte buffer[50];
@@ -110,11 +108,13 @@ void loop() {
   if (isMessage) {
     if (state<buffer[4]) {
       int channel = int(buffer[5]);
-      
-        sendCreditKey(channelValue[channel-1]);
-        Serial.print("Added ");
-        Serial.print(channelValue[channel-1]);
+      if channel <= 16 {
+        Serial.println(channel, DEC);
+        Serial.print("Adding ");
+        Serial.print(channelValue[channel]);
         Serial.println(" credits.");
+        sendCreditKey(channelValue[channel]);
+      }
       if (state == 255) {
         state = 1;
       }else{

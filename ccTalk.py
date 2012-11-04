@@ -1,3 +1,20 @@
+#ccTalk python library
+#Copyright (C) 2012 Nicolas Oberli
+#
+#This program is free software; you can redistribute it and/or
+#modify it under the terms of the GNU General Public License
+#as published by the Free Software Foundation; either version 2
+#of the License, or (at your option) any later version.
+#
+#This program is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#GNU General Public License for more details.
+#
+#You should have received a copy of the GNU General Public License
+#along with this program; if not, write to the Free Software
+#Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
 ##
 #
 # ccTalk library
@@ -282,7 +299,7 @@ class ccTalkPayload():
         eventCpt = ord(self.data[0])
         self.decodedHeader = "Event Counter : "+str(eventCpt)+"\n"
         for resultA,resultB in zip(data,data[1:])[::2]:
-            self.decodedHeader = self.decodedHeader + "Coin ID "+str(ord(resultA))+" - Error code "+str(ord(resultB))+"\n"
+            self.decodedHeader = self.decodedHeader + "Result A "+str(ord(resultA))+" - Result B "+str(ord(resultB))+"\n"
         self.decodedHeader = self.decodedHeader.strip()
         return self.decodedHeader
 

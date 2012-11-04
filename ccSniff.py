@@ -1,6 +1,23 @@
 ﻿#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+#ccSniff, a ccTalk sniffer
+#Copyright (C) 2012 Nicolas Oberli
+#
+#This program is free software; you can redistribute it and/or
+#modify it under the terms of the GNU General Public License
+#as published by the Free Software Foundation; either version 2
+#of the License, or (at your option) any later version.
+#
+#This program is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#GNU General Public License for more details.
+#
+#You should have received a copy of the GNU General Public License
+#along with this program; if not, write to the Free Software
+#Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
 import serial
 import threading
 import time
@@ -27,22 +44,18 @@ class serialReader(threading.Thread):
 
    
     def run(self):
-        #print "serialReader running"
         global data
         global readLock
         global outFile
         ser.read(ser.inWaiting())
         while not self.terminated:
             bytesToRead = ser.inWaiting()
-            #print bytesToRead
             if bytesToRead > 0:
-                #print "serial waiting for lock"
                 readLock.acquire()
                 read = ser.read(bytesToRead)
                 data = data + read 
                 if outFile is not None:
                     outFile.write(read)
-                #print "serial released lock"
                 readLock.release()
             time.sleep(0.1)
 
@@ -63,8 +76,6 @@ def enterBitBang():
     # Enter UART mode
     ser.write("\x03")
     time.sleep(0.01)
-    #if "ART1" not in ser.read(4):
-    #    sys.exit(0)
     #Baud rate : 9600
     ser.write(chr(0b01100100))
     ser.read(1)
@@ -83,15 +94,12 @@ class ccTalkDisplay(threading.Thread):
         self.terminated = False
 
     def run(self):
-        #print "display running"
         global readLock
         global data
         while not self.terminated:
             if len(data)>0:
-                #print "display waiting for lock"
                 readLock.acquire()
                 data, messages = parseMessages(data)
-                #print "display released lock"
                 readLock.release()
 
                 for i in xrange(0,len(messages)):
@@ -117,11 +125,9 @@ if __name__ == '__main__':
     else:
         try:
             if options.busPirate:
-                #ser=serial.Serial(options.serPort, 115200, timeout=1)
                 ser=serial.Serial(options.serPort, 115200)
                 enterBitBang()
             else:
-                #ser=serial.Serial(options.serPort, 9600, timeout=1)
                 ser=serial.Serial(options.serPort, 9600)
         except serial.SerialException, e:
             print "Error"
@@ -148,10 +154,8 @@ if __name__ == '__main__':
         while True:
             time.sleep(1)
     except:
-        print "Stopping display thread"
         display.stop()
         display.join()
-        print "Stopping reader thread"
         reader.stop()
         reader.join()
         if outFile is not None:

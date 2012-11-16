@@ -303,7 +303,7 @@ if __name__ == '__main__':
 
 
     print "[*] Restoring device @ " + str(options.destination) + " to " + str(options.source)
-    injectMessage( header=251, data=chr(int(options.source)), source=1, destination=int(options.destination))
+    injectMessage( header=251, data=chr(int(options.source)), source=int(options.address), destination=int(options.destination))
 
     if options.busPirate:
         leaveBitBang()

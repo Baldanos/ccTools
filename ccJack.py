@@ -203,6 +203,7 @@ if __name__ == '__main__':
 
     if options.serPort is None:
         print "Error, no serial port specified"
+        parser.print_help()
         sys.exit()
     else:
         try:

@@ -85,6 +85,9 @@ class ccResponder(threading.Thread):
             ser.read(1)
 
     def run(self):
+        """
+        Main loop. Reads packets and responds when needed
+        """
         global ser
         while not self.terminated:
             pkt = self.readPacket()

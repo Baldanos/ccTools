@@ -176,19 +176,15 @@ def injectMessage(header, data='', source=1, destination=2):
     Waits for a silence on the ccTalk bus, then sends a packet"
     """
     request = ccTalkMessage(source=source, destination=destination, header=header, payload=data)
-    bytesToRead=0
     sent=False
     while not sent:
-        start = time.clock()
-        while bytesToRead == 0 and not sent:
-            bytesToRead = ser.inWaiting()
-            if time.clock()-start >= 0.01:
-                ser.write(request.raw())
-                ser.flush()
-                ser.read(len(request.raw()))
-                sent=True
-                break
-        bytesToRead=0
+        bytesToRead = ser.inWaiting()
+        time.sleep(0.01)
+        if bytesToRead == ser.inWaiting():
+            ser.write(request.raw())
+            ser.flush()
+            sent=True
+            break
     print "[*] Request sent"
 
 if __name__ == '__main__':
@@ -269,7 +265,6 @@ if __name__ == '__main__':
             # Send an address change request to the device
             print "[*] Changing device address to "+str(options.destination)
             injectMessage( header=251, data=chr(int(options.destination)), source=int(options.address), destination=int(options.source))
-
 
             #Totally flush the input buffer before starting replies
             ser.flushInput()

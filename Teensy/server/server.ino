@@ -142,7 +142,7 @@ void loop() {
   if (isMessage) {
     if (state<buffer[4]) {
       int channel = int(buffer[5]);
-      if channel <= 16 {
+      if (channel <= 16) {
         Serial.println(channel, DEC);
         Serial.print("Adding ");
         Serial.print(channelValue[channel]);
@@ -172,9 +172,9 @@ void readPacket() {
     int dest = Uart.read();
     int length = Uart.read();
   
-    Serial.print("Got packet, waiting for ");
-    Serial.print(length+3);
-    Serial.println(" bytes of data");
+    //Serial.print("Got packet, waiting for ");
+    //Serial.print(length+3);
+    //Serial.println(" bytes of data");
     
     //Wait for full message bytes, or end receive loop
     while (Uart.available() < length+3){
@@ -207,6 +207,7 @@ void readPacket() {
 
     if (! (buffer[length+4] == 256-(sum%256))) {
       Serial.println("Packet is invalid, flushing");
+      delay(50);
       for (int i=0;i<20;i++){
         Serial.print(buffer[i], HEX);
         Serial.print(" ");

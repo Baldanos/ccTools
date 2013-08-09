@@ -389,7 +389,7 @@ class ccTalkMessage():
         Creates a new payload for the message
         """
         self.payload = ccTalkPayload(header, data)
-        self.length = chr(len(data))
+        self.length = len(data)
 
     def getPayload(self):
         return repr(self.payload)

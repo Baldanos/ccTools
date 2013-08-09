@@ -394,6 +394,9 @@ class ccTalkMessage():
     def getPayload(self):
         return repr(self.payload)
 
+    def getPayloadType(self):
+        return self.payload.headerType
+
     def _calculateChecksum(self):
         """
         Calculates the checksum for the message

@@ -228,7 +228,10 @@ class ccTalkPayload():
         self.data = data
         self.decodedHeader=''
         if self.header!='':
-            self.headerType = headerTypes[self.header]
+            try:
+                self.headerType = headerTypes[self.header]
+            except KeyError, e:
+                self.headerType = 'Unknown'
         else:
             self.headerType=''
 

@@ -1,8 +1,5 @@
-ccData.bin
-ccTalk.pyc
+*.pyc
 doc/
-encryption.txt
-hijack.bin
 pres/
 server.py
 

@@ -39,14 +39,14 @@ def parseMessages(data):
             length = ord(data[1])
             if len(data) < length+5:
                 break
-            message=data[:length+5]
+            message = data[:length+5]
             msg = ccTalkMessage(message)
             messages.append(msg)
             data = data[length+5:]
         except:
             data = data[1:]
             continue
-    return (data,messages)
+    return (data, messages)
 
 # Header types definition
 headerTypes = {
@@ -224,16 +224,16 @@ class ccTalkPayload():
         try:
             self.header = int(header)
         except TypeError, e:
-            self.header=0
+            self.header = 0
         self.data = data
-        self.decodedHeader=''
-        if self.header!='':
+        self.decodedHeader = ''
+        if self.header != '':
             try:
                 self.headerType = headerTypes[self.header]
             except KeyError, e:
                 self.headerType = 'Unknown'
         else:
-            self.headerType=''
+            self.headerType = ''
 
     def parsePayload(self, header=0):
         """
@@ -241,19 +241,20 @@ class ccTalkPayload():
         The header parameter is used to parse a ccTalk response
         """
         #Analyzing a response
-        if self.header==0:
-            #TODO: Add handling code for other headers 
-            if header==230 or header==231:
+        if self.header == 0:
+            #TODO: Add handling code for other headers
+            if header == 230 or header == 231:
                 #Process inhibit status
                 return self._extractChannelData()
-            elif header==229:
+            elif header == 229:
                 #Process coin event code status
                 return self._extractCoinBuffer()
-            elif header in [131, 145, 170, 171, 184, 192, 241, 242, 244, 245, 246]:
+            elif header in [131, 145, 170, 171, 184, 192, 241, 242, 244, 245,
+                    246]:
                 #Process functions that return ASCII
                 self.decodedHeader = str(self.data)
                 return self.decodedHeader
-            elif header==227:
+            elif header == 227:
                 return self._extractEnableState()
             else:
                 self.decodedHeader = self.data.encode('hex')
@@ -261,9 +262,9 @@ class ccTalkPayload():
         #Anlyzing a request
         else:
             #TODO: Add handling code for other functions
-            if self.header==231:
+            if self.header == 231:
                 return self._extractChannelData()
-            elif self.header==228:
+            elif self.header == 228:
                 return self._extractEnableState()
             elif self.header in [184, 209]:
                 return self._extractChannelInfo()
@@ -284,12 +285,12 @@ class ccTalkPayload():
     ##
 
     def _extractEnableState(self):
-        if self.data=='\x01':
+        if self.data == '\x01':
             self.decodedHeader = "State enabled"
         else:
             self.decodedHeader = "State disabled"
         return self.decodedHeader
-        
+
     def _extractChannelInfo(self):
         self.decodedHeader = "Channel "+str(ord(self.data))
         return self.decodedHeader
@@ -301,8 +302,9 @@ class ccTalkPayload():
         data = self.data[1:]
         eventCpt = ord(self.data[0])
         self.decodedHeader = "Event Counter : "+str(eventCpt)+"\n"
-        for resultA,resultB in zip(data,data[1:])[::2]:
-            self.decodedHeader = self.decodedHeader + "Result A "+str(ord(resultA))+" - Result B "+str(ord(resultB))+"\n"
+        for resultA, resultB in zip(data, data[1:])[::2]:
+            self.decodedHeader = self.decodedHeader + "Result A "+\
+                    str(ord(resultA))+" - Result B "+str(ord(resultB))+"\n"
         self.decodedHeader = self.decodedHeader.strip()
         return self.decodedHeader
 
@@ -310,7 +312,8 @@ class ccTalkPayload():
         """
         Extract channel data
         Used with Headers 230 and 231 (Modify/Request Inhibit status)
-        Gets the two bytes input and sends back an array containing the channel status
+        Gets the two bytes input and sends back an array containing the
+        channel status
         1 - enabled
         0 - disabled
         """
@@ -319,18 +322,19 @@ class ccTalkPayload():
             for bit in self._extractBits(ord(byte)):
                 channels.append(bit)
             ch = 1
-            enabledChannels=[]
+            enabledChannels = []
             disabledChannels = []
-            for channel in channels: 
-                if channel ==1:
+            for channel in channels:
+                if channel == 1:
                     enabledChannels.append(ch)
                 else:
                     disabledChannels.append(ch)
-                ch = ch+1
-        self.decodedHeader = "Enabled channels : " + str(enabledChannels) + "\nDisabled channels : " + str(disabledChannels) 
+                ch = ch + 1
+        self.decodedHeader = "Enabled channels : " + str(enabledChannels) + \
+                "\nDisabled channels : " + str(disabledChannels)
         return self.decodedHeader
 
-    def _extractBits(self,byte):
+    def _extractBits(self, byte):
         for i in xrange(8):
             yield (byte >> i) & 1
 
@@ -366,26 +370,33 @@ class ccTalkMessage():
         """
         Returns a byte string representing the ccTalk message
         """
-        return chr(self.destination)+chr(self.length)+chr(self.source)+repr(self.payload)+chr(self._calculateChecksum())
+        return chr(self.destination)+chr(self.length)+chr(self.source)+\
+                repr(self.payload)+chr(self._calculateChecksum())
 
     def __len__(self):
-        return len(chr(self.destination)+chr(self.length)+chr(self.source)+repr(self.payload)+chr(self._calculateChecksum()))
+        return len(chr(self.destination)+chr(self.length)+chr(self.source)+\
+                repr(self.payload)+chr(self._calculateChecksum()))
 
     def __repr__(self):
         """
         Returns a byte string representing the ccTalk message
         """
-        return repr(chr(self.destination)+chr(self.length)+chr(self.source)+repr(self.payload)+chr(self._calculateChecksum()))
+        return repr(chr(self.destination)+chr(self.length)+chr(self.source)+\
+                repr(self.payload)+chr(self._calculateChecksum()))
 
     def __str__(self):
         """
         Returns a user-friendly representation of the message
         """
-        if self.payload.data !="":
-            return "<cctalk src="+str(self.source)+" dst="+str(self.destination)+" length="+str(self.length)+" header="+str(self.payload.header)+" data="+self.payload.data.encode('hex')+">"
+        if self.payload.data != "":
+            return "<cctalk src="+str(self.source)+" dst="+\
+                    str(self.destination)+" length="+str(self.length)+\
+                    " header="+str(self.payload.header)+\
+                    " data="+self.payload.data.encode('hex')+">"
         else:
-            return "<cctalk src="+str(self.source)+" dst="+str(self.destination)+" length="+str(self.length)+" header="+str(self.payload.header)+">"
-                
+            return "<cctalk src="+str(self.source)+" dst="+\
+                    str(self.destination)+" length="+str(self.length)+\
+                    " header="+str(self.payload.header)+">"
 
     def setPayload(self, header, data=''):
         """
@@ -404,7 +415,8 @@ class ccTalkMessage():
         """
         Calculates the checksum for the message
         """
-        data = chr(self.destination)+chr(self.length)+chr(self.source)+repr(self.payload)
+        data = chr(self.destination)+chr(self.length)+chr(self.source)+\
+                repr(self.payload)
         total = 0
         for byte in data:
             total = total + ord(byte)

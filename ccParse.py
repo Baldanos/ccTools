@@ -88,7 +88,8 @@ def main ():
                 else:
                     text = "\n= Header " + str(messages[pos].payload.header) +\
                             " (" + messages[pos].payload.headerType + ")\n"
-            text = text + "\n= Raw dump of packet \n" + messages[pos].raw()
+            text = text + "\n= Raw dump of packet \n" +\
+                    messages[pos].raw().encode('hex')
             infoTxt.set_text(text)
 
     liste = urwid.Pile(

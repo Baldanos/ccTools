@@ -42,7 +42,7 @@ class serialReader(threading.Thread):
         self.terminated = False
         global ser
 
-   
+
     def run(self):
         global data
         global readLock
@@ -53,7 +53,7 @@ class serialReader(threading.Thread):
             if bytesToRead > 0:
                 readLock.acquire()
                 read = ser.read(bytesToRead)
-                data = data + read 
+                data = data + read
                 if outFile is not None:
                     outFile.write(read)
                 readLock.release()
@@ -72,7 +72,7 @@ def enterBitBang():
     if "BBIO1" not in ser.read(5):
         print "Could not get into bbIO mode"
         sys.exit(0)
-        
+
     # Enter UART mode
     ser.write("\x03")
     time.sleep(0.01)
@@ -102,7 +102,7 @@ class ccTalkDisplay(threading.Thread):
                 data, messages = parseMessages(data)
                 readLock.release()
 
-                for i in xrange(0,len(messages)):
+                for i in xrange(0, len(messages)):
                     print messages[i]
             time.sleep(0.2)
 
@@ -113,9 +113,13 @@ class ccTalkDisplay(threading.Thread):
 if __name__ == '__main__':
 
     parser = OptionParser()
-    parser.add_option("-i", "--interface", help="Serial port to use", metavar="DEVICE", dest="serPort")
-    parser.add_option("-w", "--write", help="File name to write data", metavar="FILE", dest="outFile")
-    parser.add_option("-b", "--bus-pirate", help="Use this switch to tell the serial port is a bus pirate", dest="busPirate", action="store_true", default=False)
+    parser.add_option("-i", "--interface", help="Serial port to use",
+            metavar="DEVICE", dest="serPort")
+    parser.add_option("-w", "--write", help="File name to write data",
+            metavar="FILE", dest="outFile")
+    parser.add_option("-b", "--bus-pirate",
+            help="Use this switch to tell the serial port is a bus pirate",
+            dest="busPirate", action="store_true", default=False)
 
     (options, args) = parser.parse_args()
 
@@ -126,10 +130,10 @@ if __name__ == '__main__':
     else:
         try:
             if options.busPirate:
-                ser=serial.Serial(options.serPort, 115200)
+                ser = serial.Serial(options.serPort, 115200)
                 enterBitBang()
             else:
-                ser=serial.Serial(options.serPort, 9600)
+                ser = serial.Serial(options.serPort, 9600)
         except serial.SerialException, e:
             print "Error"
             print e.message

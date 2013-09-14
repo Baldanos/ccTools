@@ -25,17 +25,17 @@ data = ""
 
 
 class Label (urwid.Text):
-    
+
     def selectable(self):
         return True
-    
+
     def keypress(self,  size,  key):
         return key
 
 
 
 def reloadContent():
-    content=[urwid.AttrMap(w, None, 'focus') for w in keys]
+    content = [urwid.AttrMap(w, None, 'focus') for w in keys]
     return content
 
 def main ():
@@ -51,42 +51,53 @@ def main ():
 
     menutxt = urwid.Text("Menu bar")
     menufill = urwid.Filler(menutxt)
-    
+
     infoTxt = urwid.Text("Info panel")
     infoFill = urwid.Filler(infoTxt)
 
-    def keystroke (input):
+    def keystroke (kinput):
 
-        if input is 'r':
+        if kinput is 'r':
             infoTxt.set_text(str(len(messages)))
             reloadContent()
 
-        if input in ('q', 'Q'):
+        if kinput in ('q', 'Q'):
             raise urwid.ExitMainLoop()
 
-        if input is 'enter':
+        if kinput is 'enter':
             focus, pos = messagesList.get_focus()
-            if messages[pos].payload.data!="":
+            if messages[pos].payload.data != "":
                 if messages[pos].payload.header == 0:
-                    text = "\n= In response to : " + messages[pos-1].payload.headerType + "\n" + str(messages[pos-1]) + "\n"
-                    text = text + "\n= Payload decoding \n" + messages[pos].payload.parsePayload(messages[pos-1].payload.header) + "\n" 
+                    text = "\n= In response to : " +\
+                            messages[pos-1].payload.headerType + "\n" +\
+                            str(messages[pos-1]) + "\n"
+                    text = text + "\n= Payload decoding \n" +\
+                            messages[pos].payload.parsePayload(
+                                    messages[pos-1].payload.header) + "\n"
                 else:
-                    text = "\n= Header " + str(messages[pos].payload.header) + " (" + messages[pos].payload.headerType + ")\n"
-                    text = text + "= Payload decoding \n" + messages[pos].payload.parsePayload(messages[pos].payload.header) + "\n"
+                    text = "\n= Header " + str(messages[pos].payload.header) +\
+                            " (" + messages[pos].payload.headerType + ")\n"
+                    text = text + "= Payload decoding \n" +\
+                            messages[pos].payload.parsePayload(
+                                    messages[pos].payload.header) + "\n"
             else:
                 if messages[pos].payload.header == 0:
-                    text = "\n= In response to : " + messages[pos-1].payload.headerType + "\n" + str(messages[pos-1]) + "\n"
+                    text = "\n= In response to : " +\
+                            messages[pos-1].payload.headerType + "\n" +\
+                            str(messages[pos-1]) + "\n"
                 else:
-                    text = "\n= Header " + str(messages[pos].payload.header) + " (" + messages[pos].payload.headerType + ")\n"
-            text = text + "\n= Raw dump of packet \n" + eval(repr(messages[pos])).encode('hex')
+                    text = "\n= Header " + str(messages[pos].payload.header) +\
+                            " (" + messages[pos].payload.headerType + ")\n"
+            text = text + "\n= Raw dump of packet \n" + messages[pos].raw()
             infoTxt.set_text(text)
 
     liste = urwid.Pile(
                        [(urwid.LineBox(messagesList)),
-                        ('fixed',17,(urwid.LineBox(infoFill))), 
+                        ('fixed',17,(urwid.LineBox(infoFill))),
                         ])
 
-    header = urwid.AttrMap(urwid.Text('ccParse 0.2 - ' + str(len(keys)) + ' messages'), 'head')
+    header = urwid.AttrMap(urwid.Text('ccParse 0.2 - ' + str(len(keys)) +\
+            ' messages'), 'head')
     view = urwid.Frame(liste,  header=header)
     loop = urwid.MainLoop(view, palette, unhandled_input=keystroke)
     loop.run()
@@ -99,8 +110,8 @@ if __name__ == '__main__':
         f = open(sys.argv[1],"rb")
         data = f.read()
         f.close()
-        data,messages = parseMessages(data)
-        keys=[]
+        data, messages = parseMessages(data)
+        keys = []
         for message in messages:
             keys.append(Label(str(message)))
         reloadContent()

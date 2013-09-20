@@ -354,15 +354,25 @@ class ccTalkMessage():
             self.length = len(payload)
             self.source = source
             self.payload = ccTalkPayload(header, payload)
-            #self.payload = ccTalkPayload()
+            self.sigmode = 0
         elif self._validateChecksum(data):
-            #Generates a message using raw data
+            #Generates a message using raw data (Checksum)
             self.destination = ord(data[0])
             self.length = ord(data[1])
             self.source = ord(data[2])
             header = ord(data[3])
             data = data[4:-1]
             self.payload = ccTalkPayload(header, data)
+            self.sigmode = 0
+        elif self._validateCRC(data):
+            #Generates a message using raw data (CRC)
+            self.destination = ord(data[0])
+            self.length = ord(data[1])
+            self.source = 1     #Source is always assumed to be 1 in CRC mode
+            header = ord(data[3])
+            data = data[4:-1]
+            self.payload = ccTalkPayload(header, data)
+            self.sigmode = 1
         else:
             raise Exception 
 
@@ -381,22 +391,35 @@ class ccTalkMessage():
         """
         Returns a byte string representing the ccTalk message
         """
-        return repr(chr(self.destination)+chr(self.length)+chr(self.source)+\
-                repr(self.payload)+chr(self._calculateChecksum()))
+        if self.sigmode == 0:
+            return repr(chr(self.destination)+chr(self.length)+\
+                    chr(self.source)+repr(self.payload)+\
+                    chr(self._calculateChecksum()))
+        else:
+            crc = self._calculateCRC()
+            return repr(chr(self.destination)+chr(self.length)+\
+                    chr(crc & 0xff)+repr(self.payload)+\
+                    chr((crc & 0xff00) >> 8))
 
     def __str__(self):
         """
         Returns a user-friendly representation of the message
         """
+        if self.sigmode == 0:
+            signature = 'checksum'
+        else:
+            signature = 'CRC'
         if self.payload.data != "":
             return "<cctalk src="+str(self.source)+" dst="+\
                     str(self.destination)+" length="+str(self.length)+\
                     " header="+str(self.payload.header)+\
-                    " data="+self.payload.data.encode('hex')+">"
+                    " data="+self.payload.data.encode('hex')+\
+                    " signature="+signature+">"
         else:
             return "<cctalk src="+str(self.source)+" dst="+\
                     str(self.destination)+" length="+str(self.length)+\
-                    " header="+str(self.payload.header)+">"
+                    " header="+str(self.payload.header)+\
+                    " signature="+signature+">"
 
     def setPayload(self, header, data=''):
         """
@@ -431,3 +454,30 @@ class ccTalkMessage():
             total = total + ord(byte)
         return (256-(total%256)==ord(data[-1]))
 
+    def _calculateCRC(self, data=None):
+        """
+        Calculates the CCITT checksum (CRC16) that can be used as a ccTalk
+        checksuming algorithm
+        """
+        if data is None:
+            data = chr(self.destination)+chr(self.length)+repr(self.payload)
+        crc=0
+        poly = 0x1021
+
+        for c in data:
+            crc ^= (ord(c) << 8) & 0xffff
+            for x in xrange(8):
+                if crc & 0x8000:
+                    crc = ((crc << 1) ^ poly) & 0xffff
+                else:
+                    crc <<= 1
+                    crc &= 0xffff
+        return crc
+
+    def _validateCRC(self, data):
+        """
+        Validates the CRC of a full message
+        """
+        crc = ord(data[2]) + (ord(data[-1]) << 8)
+        data = data[0:2]+data[3:-1]
+        return crc == self._calculateCRC(data)

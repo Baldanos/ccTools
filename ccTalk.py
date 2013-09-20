@@ -380,12 +380,18 @@ class ccTalkMessage():
         """
         Returns a byte string representing the ccTalk message
         """
-        return chr(self.destination)+chr(self.length)+chr(self.source)+\
-                repr(self.payload)+chr(self._calculateChecksum())
+        if self.sigmode == 0:
+            return chr(self.destination)+chr(self.length)+chr(self.source)+\
+                    repr(self.payload)+chr(self._calculateChecksum())
+        else:
+            crc = self._calculateCRC()
+            return chr(self.destination)+chr(self.length)+chr(crc & 0xff)+\
+                    repr(self.payload)+chr((crc & 0xff00) >> 8)
+
 
     def __len__(self):
         return len(chr(self.destination)+chr(self.length)+chr(self.source)+\
-                repr(self.payload)+chr(self._calculateChecksum()))
+                repr(self.payload)+1)
 
     def __repr__(self):
         """
